@@ -1,0 +1,74 @@
+<html>
+<head>
+  <link href='style.css' rel='stylesheet' type='text/css'>  
+  <script src="//code.jquery.com/jquery-2.1.1.min.js"></script>
+  <script src="//code.jquery.com/ui/1.11.2/jquery-ui.js"></script>
+  <script src="marked.min.js"></script>  
+</head>
+<body>
+<div id="main">
+  <div class="ui-widget">
+    <input id="search" placeholder="search e.g. team, event">
+  </div>
+
+  <div id="content"></div>
+  <div id="results"></div>
+</div>
+<script>
+$(function() {
+  
+  var props = {
+    endpoint: "https://api.github.com",
+    repo: "menmo/everysport-api-documentation",
+    in: "file,path"
+  };
+
+  var results = {};
+
+  function showResults( message ) {
+    $( "<div>" ).text( message ).prependTo( "#results" );
+    $( "#results" ).scrollTop( 0 );
+  }
+
+  function endsWith(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+  }
+  $( "#search" ).autocomplete({
+    source: function( request, response ) {
+
+      var url = props.endpoint + "/search/code?q=" + request.term.trim() + "+in:" + props.in + "+repo:" + props.repo;
+      $.ajax({        
+        url: url,        
+        headers: {
+          Accept: "application/vnd.github.v3.text-match+json"     
+        },
+        success: function( data ) {
+          if(data.total_count > 0) {            
+            data.items.forEach(function(item) {
+              results[item.name] = item;
+            });
+
+            response( Object.keys(results) );
+          }
+        }
+      });
+    },
+    minLength: 3,
+    select: function( event, ui ) {                  
+      var url = props.endpoint + "/repos/" + props.repo + "/contents/" + results[ui.item.value].path;
+      $.ajax({
+        url: url,
+        success: function(data) {
+          var content = data.encoding === "base64" ? atob(data.content) : data.content;          
+          content = marked(content);
+          $("#content").html(content);
+        }
+      });      
+    }
+  });
+
+});
+</script>
+
+</body>
+</html>
